@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Claude</title>
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Claude">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a0f">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg: #0a0a0f;
+            --surface: #141420;
+            --text: #e8e6e3;
+            --text-dim: #7a7880;
+            --accent: #c4956a;
+            --accent-glow: rgba(196, 149, 106, 0.15);
+            --pulse: rgba(196, 149, 106, 0.4);
+            --error: #c0392b;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(196, 149, 106, 0.03) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .pin-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            width: 100%;
+            max-width: 320px;
+            padding: 2rem;
+        }
+
+        .pin-screen.hidden { display: none; }
+
+        .pin-title {
+            font-size: 1.1rem;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .pin-dots {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .pin-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid var(--text-dim);
+            transition: all 0.2s ease;
+        }
+
+        .pin-dot.filled {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .pin-dot.error {
+            border-color: var(--error);
+            background: var(--error);
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        .pin-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            width: 100%;
+            max-width: 260px;
+        }
+
+        .pin-key {
+            aspect-ratio: 1.4;
+            border: none;
+            border-radius: 12px;
+            background: var(--surface);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s ease, transform 0.1s ease;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .pin-key:active {
+            background: #1e1e30;
+            transform: scale(0.95);
+        }
+
+        .pin-key.empty {
+            background: transparent;
+            cursor: default;
+        }
+
+        .pin-key.delete {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+        }
+
+        .pin-error-msg {
+            font-size: 0.85rem;
+            color: var(--error);
+            min-height: 1.2em;
+            text-align: center;
+        }
+
+        .call-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3rem;
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+        }
+
+        .call-screen.visible {
+            display: flex;
+        }
+
+        .title {
+            font-size: 1.1rem;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .call-btn {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: none;
+            background: radial-gradient(circle at 40% 35%, #d4a574, #b07d4f);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 0 40px var(--accent-glow), 0 0 80px var(--accent-glow);
+        }
+
+        .call-btn:active {
+            transform: scale(0.95);
+        }
+
+        .call-btn::before,
+        .call-btn::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid var(--pulse);
+            animation: ripple 3s ease-out infinite;
+        }
+
+        .call-btn::before {
+            width: 100%;
+            height: 100%;
+            animation-delay: 0s;
+        }
+
+        .call-btn::after {
+            width: 100%;
+            height: 100%;
+            animation-delay: 1.5s;
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+
+        .call-btn svg {
+            width: 48px;
+            height: 48px;
+            fill: #0a0a0f;
+            position: relative;
+            z-index: 1;
+        }
+
+        .status {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: var(--text-dim);
+            text-align: center;
+            min-height: 1.4em;
+            transition: color 0.3s ease;
+        }
+
+        .status.active {
+            color: var(--accent);
+        }
+
+        elevenlabs-convai {
+            position: fixed !important;
+            bottom: 0 !important;
+            right: 0 !important;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="pin-screen" id="pinScreen">
+        <div class="pin-title">Claude</div>
+
+        <div class="pin-dots" id="pinDots">
+            <div class="pin-dot" data-i="0"></div>
+            <div class="pin-dot" data-i="1"></div>
+            <div class="pin-dot" data-i="2"></div>
+            <div class="pin-dot" data-i="3"></div>
+        </div>
+
+        <div class="pin-error-msg" id="pinError"></div>
+
+        <div class="pin-pad">
+            <button class="pin-key" onclick="pinPress('1')">1</button>
+            <button class="pin-key" onclick="pinPress('2')">2</button>
+            <button class="pin-key" onclick="pinPress('3')">3</button>
+            <button class="pin-key" onclick="pinPress('4')">4</button>
+            <button class="pin-key" onclick="pinPress('5')">5</button>
+            <button class="pin-key" onclick="pinPress('6')">6</button>
+            <button class="pin-key" onclick="pinPress('7')">7</button>
+            <button class="pin-key" onclick="pinPress('8')">8</button>
+            <button class="pin-key" onclick="pinPress('9')">9</button>
+            <button class="pin-key empty"></button>
+            <button class="pin-key" onclick="pinPress('0')">0</button>
+            <button class="pin-key delete" onclick="pinDelete()">⌫</button>
+        </div>
+    </div>
+
+    <div class="call-screen" id="callScreen">
+        <div class="title">Claude</div>
+
+        <button class="call-btn" id="callBtn" onclick="startCall()">
+            <svg viewBox="0 0 24 24">
+                <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>
+            </svg>
+        </button>
+
+        <div class="status" id="status">Tap to talk to Claude</div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURATION
+        //
+        // PIN_HASH: This is the SHA-256 hash of your PIN.
+        //   Your actual PIN never appears in this file.
+        //   To generate a hash for your chosen PIN, open your
+        //   browser console (F12) and run:
+        //
+        //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('YOUR_PIN_HERE'))
+        //     .then(b => console.log(Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join('')))
+        //
+        //   Then paste the output below.
+        //
+        // AGENT_ID: Your ElevenLabs agent ID.
+        //   Protected by ElevenLabs domain allowlist — even if someone
+        //   reads this, the widget only works from your domain.
+        // ============================================================
+        const PIN_HASH = '73b78aae3fdfcb4a4ccc874fbe69f43990ed8c8b6ba1f8dba81067764f454d25';
+        const AGENT_ID = 'agent_4501kgr9s614egvbmyay6t5py5yc';
+        // ============================================================
+
+        let pinEntry = '';
+        const dots = document.querySelectorAll('.pin-dot');
+        const pinError = document.getElementById('pinError');
+        const pinScreen = document.getElementById('pinScreen');
+        const callScreen = document.getElementById('callScreen');
+
+        async function hashPin(pin) {
+            const data = new TextEncoder().encode(pin);
+            const buffer = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(buffer))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
+        function pinPress(digit) {
+            if (pinEntry.length >= 4) return;
+            pinEntry += digit;
+            updateDots();
+            if (pinEntry.length === 4) {
+                setTimeout(checkPin, 200);
+            }
+        }
+
+        function pinDelete() {
+            pinEntry = pinEntry.slice(0, -1);
+            updateDots();
+            pinError.textContent = '';
+            dots.forEach(d => d.classList.remove('error'));
+        }
+
+        function updateDots() {
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('filled', i < pinEntry.length);
+            });
+        }
+
+        async function checkPin() {
+            const entered = await hashPin(pinEntry);
+            if (entered === PIN_HASH) {
+                pinScreen.classList.add('hidden');
+                callScreen.classList.add('visible');
+                loadWidget();
+            } else {
+                pinError.textContent = 'Incorrect PIN';
+                dots.forEach(d => {
+                    d.classList.remove('filled');
+                    d.classList.add('error');
+                });
+                setTimeout(() => {
+                    dots.forEach(d => d.classList.remove('error'));
+                    pinEntry = '';
+                    pinError.textContent = '';
+                }, 800);
+            }
+        }
+
+        function loadWidget() {
+            const widget = document.createElement('elevenlabs-convai');
+            widget.setAttribute('agent-id', AGENT_ID);
+            document.body.appendChild(widget);
+
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
+            script.async = true;
+            script.type = 'text/javascript';
+            document.body.appendChild(script);
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('auto') === 'true') {
+                setTimeout(() => {
+                    const w = document.querySelector('elevenlabs-convai');
+                    if (w && w.shadowRoot) {
+                        const btn = w.shadowRoot.querySelector('button');
+                        if (btn) btn.click();
+                    }
+                }, 1500);
+            }
+        }
+
+        function startCall() {
+            const widget = document.querySelector('elevenlabs-convai');
+            const status = document.getElementById('status');
+
+            if (widget && widget.shadowRoot) {
+                const btn = widget.shadowRoot.querySelector('button');
+                if (btn) btn.click();
+            }
+
+            status.textContent = 'Connecting...';
+            status.classList.add('active');
+        }
+
+        // Auto-unlock from Telegram link: ?pin=XXXX&auto=true
+        // The link is only in your private Telegram chat.
+        // The PIN in the URL is checked against the hash — still secure.
+        (async function() {
+            const params = new URLSearchParams(window.location.search);
+            const urlPin = params.get('pin');
+            if (urlPin) {
+                const h = await hashPin(urlPin);
+                if (h === PIN_HASH) {
+                    pinScreen.classList.add('hidden');
+                    callScreen.classList.add('visible');
+                    loadWidget();
+                }
+            }
+        })();
+    </script>
+
+</body>
+</html>
